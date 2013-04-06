@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, StandaloneDeriving #-}
 -- | Abstract syntax
 module AST where
+import Control.Applicative
 import Data.Monoid
+import Data.Set(Set)
+import qualified Data.Set as S
 
 -- | Expressions
 data Expr
@@ -11,6 +14,17 @@ data Expr
   | EApp Expr Expr      -- ^ e1 e2
   | EAnno Expr Polytype -- ^ e : A
   deriving (Eq, Show)
+
+-- | subst e' x e = [e'/x]e
+subst :: Expr -> Var -> Expr -> Expr
+subst e' x expr = case expr of
+  EVar x'   | x' == x   -> e'
+            | otherwise -> EVar x'
+  EUnit                 -> EUnit
+  EAbs x' e | x' == x   -> EAbs x' e
+            | otherwise -> EAbs x' (subst e' x e)
+  EApp e1 e2            -> EApp (subst e' x e1) (subst e' x e2)
+  EAnno e t             -> EAnno (subst e' x e) t
 
 -- Smart constructors
 var :: String -> Expr
@@ -59,6 +73,49 @@ tforalls = flip (foldr TForall)
 
 type Polytype = Type Poly
 type Monotype = Type Mono
+
+-- | Is the type a Monotype?
+monotype :: Type a -> Maybe Monotype
+monotype typ = case typ of
+  TUnit       -> Just TUnit
+  TVar v      -> Just $ TVar v
+  TForall _ _ -> Nothing
+  TExists v   -> Just $ TExists v
+  TFun t1 t2  -> TFun <$> monotype t1 <*> monotype t2
+
+-- | Any type is a Polytype since Monotype is a subset of Polytype
+polytype :: Type a -> Polytype
+polytype typ = case typ of
+  TUnit       -> TUnit
+  TVar v      -> TVar v
+  TForall v t -> TForall v t
+  TExists v   -> TExists v
+  TFun t1 t2  -> TFun (polytype t1) (polytype t2)
+
+-- | The free type variables in a type
+freeTVars :: Type a -> Set TVar
+freeTVars typ = case typ of
+  TUnit       -> mempty
+  TVar v      -> S.singleton v
+  TForall v t -> S.delete v $ freeTVars t
+  TExists v   -> S.singleton v
+  TFun t1 t2  -> freeTVars t1 `mappend` freeTVars t2
+
+-- | typeSubst A α B = [A/α]B
+typeSubst :: Type a -> TVar -> Type a -> Type a
+typeSubst t' v typ = case typ of
+  TUnit                    -> TUnit
+  TVar v'      | v' == v   -> t'
+               | otherwise -> TVar v'
+  TForall v' t | v' == v   -> TForall v' t
+               | otherwise -> TForall v' (typeSubst t' v t)
+  TExists v'   | v' == v   -> t'
+               | otherwise -> TExists v'
+  TFun t1 t2               -> TFun (typeSubst t' v t1) (typeSubst t' v t2)
+
+typeSubsts :: [(Type a, TVar)] -> Type a -> Type a
+typeSubsts = flip $ foldr $ uncurry typeSubst
+
 
 data ContextKind = Complete | Incomplete
 
