@@ -71,8 +71,11 @@ instantiateL gamma alpha a =
     Just gamma' -> return gamma'
     Nothing -> case a of
       -- InstLReach
-      TExists beta | ordered gamma alpha beta ->
-        return $ fromJust $ solve gamma beta (TExists alpha)
+      TExists beta 
+        | ordered gamma alpha beta ->
+            return $ fromJust $ solve gamma beta (TExists alpha)
+        | otherwise ->
+            return $ fromJust $ solve gamma alpha (TExists beta)
       -- InstLArr
       TFun a1 a2   -> do
         alpha1 <- freshTVar
@@ -106,8 +109,11 @@ instantiateR gamma a alpha =
     Just gamma' -> return gamma'
     Nothing -> case a of
       -- InstRReach
-      TExists beta | ordered gamma alpha beta -> return $
-        fromJust $ solve gamma beta (TExists alpha)
+      TExists beta 
+        | ordered gamma alpha beta ->
+            return $ fromJust $ solve gamma beta (TExists alpha)
+        | otherwise ->
+            return $ fromJust $ solve gamma alpha (TExists beta)
       -- InstRArr
       TFun a1 a2   -> do
         alpha1 <- freshTVar
