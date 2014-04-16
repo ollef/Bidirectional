@@ -32,6 +32,14 @@ subtype gamma typ1 typ2 =
     (TFun a1 a2, TFun b1 b2) -> do
       theta <- subtype gamma b1 a1
       subtype theta (apply theta a2) (apply theta b2)
+
+    -- <:forallR
+    (a, TForall alpha b) -> do
+      -- Do alpha conversion to avoid clashes
+      alpha' <- freshTVar
+      dropMarker (CForall alpha') <$>
+        subtype (gamma >: CForall alpha') a (typeSubst (TVar alpha') alpha b)
+      
     -- <:forallL
     (TForall alpha a, b) -> do
       -- Do alpha conversion to avoid clashes
@@ -40,12 +48,7 @@ subtype gamma typ1 typ2 =
         subtype (gamma >++ [CMarker alpha', CExists alpha'])
                 (typeSubst (TExists alpha') alpha a)
                 b
-    -- <:forallR
-    (a, TForall alpha b) -> do
-      -- Do alpha conversion to avoid clashes
-      alpha' <- freshTVar
-      dropMarker (CForall alpha') <$>
-        subtype (gamma >: CForall alpha') a (typeSubst (TVar alpha') alpha b)
+
     -- <:InstantiateL
     (TExists alpha, a) | alpha `elem` existentials gamma
                       && alpha `S.notMember` freeTVars a ->
