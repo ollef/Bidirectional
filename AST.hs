@@ -2,6 +2,7 @@
 -- | Abstract syntax
 module AST where
 import Control.Applicative
+import Data.Semigroup
 import Data.Monoid
 import Data.Set(Set)
 import qualified Data.Set as S
@@ -131,6 +132,7 @@ deriving instance Eq (ContextElem a)
 deriving instance Show (ContextElem a)
 
 newtype GContext a      = Context [ContextElem a]
+  deriving Show
 type CompleteContext = GContext Complete
 type Context         = GContext Incomplete
 
@@ -151,6 +153,9 @@ dropMarker m (Context gamma) = Context $ tail $ dropWhile (/= m) gamma
 breakMarker :: ContextElem a -> GContext a -> (GContext a, GContext a)
 breakMarker m (Context xs) = let (r, _:l) = break (== m) xs in (Context l, Context r)
 
+instance Semigroup (GContext a) where
+  Context gamma <> Context delta = Context (delta ++ gamma)
+
 instance Monoid (GContext a) where
   mempty = Context []
-  mappend (Context gamma) (Context delta) = Context (delta ++ gamma)
+  mappend = (<>)

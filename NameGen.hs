@@ -30,16 +30,22 @@ evalNameGen = flip evalState initialNameState
 -- | Create a fresh variable
 freshVar :: NameGen Var
 freshVar = do
-  v:vs <- gets varNames
-  modify $ \s -> s {varNames = vs}
-  return v
+  vs0 <- gets varNames
+  case vs0 of
+    [] -> error "freshVar: encountered empty list"
+    v:vs -> do
+      modify $ \s -> s {varNames = vs}
+      return v
 
 -- | Create a fresh type variable
 freshTVar :: NameGen TVar
 freshTVar = do
-  v:vs <- gets tvarNames
-  modify $ \s -> s {tvarNames = vs}
-  return v
+  vs0 <- gets tvarNames
+  case vs0 of
+    [] -> error "freshTVar: encountered empty list"
+    v:vs -> do
+      modify $ \s -> s {tvarNames = vs}
+      return v
 
 -- | Print some debugging info
 traceNS :: (Pretty a, Pretty b) => String -> a -> NameGen b -> NameGen b
