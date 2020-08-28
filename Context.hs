@@ -53,6 +53,7 @@ typewf gamma typ = case typ of
   TVar alpha -> alpha `elem` foralls gamma
   -- UnitWF
   TUnit -> True
+  TInteger -> True
   -- ArrowWF
   TFun a b -> typewf gamma a && typewf gamma b
   -- ForallWF
@@ -95,6 +96,7 @@ insertAt gamma c theta = gammaL <> theta <> gammaR
 apply :: Context -> Polytype -> Polytype
 apply gamma typ = case typ of
   TUnit       -> TUnit
+  TInteger    -> TInteger
   TVar v      -> TVar v
   TForall v t -> TForall v (apply gamma t)
   TExists v   -> maybe (TExists v) (apply gamma . polytype) $ findSolved gamma v

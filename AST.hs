@@ -11,9 +11,15 @@ import qualified Data.Set as S
 data Expr
   = EVar Var            -- ^ x
   | EUnit               -- ^ ()
+  | ELit Int            -- ^ 1, 2, 3, ...
+  | EBuiltin Builtin    -- ^ arithmetic
   | EAbs Var Expr       -- ^ \x. e
   | EApp Expr Expr      -- ^ e1 e2
   | EAnno Expr Polytype -- ^ e : A
+  deriving (Eq, Show)
+
+data Builtin
+  = Successor
   deriving (Eq, Show)
 
 -- | subst e' x e = [e'/x]e
@@ -22,6 +28,8 @@ subst e' x expr = case expr of
   EVar x'   | x' == x   -> e'
             | otherwise -> EVar x'
   EUnit                 -> EUnit
+  ELit n                -> ELit n
+  EBuiltin f            -> EBuiltin f
   EAbs x' e | x' == x   -> EAbs x' e
             | otherwise -> EAbs x' (subst e' x e)
   EApp e1 e2            -> EApp (subst e' x e1) (subst e' x e2)
@@ -49,6 +57,7 @@ data TypeKind = Mono | Poly
 --   Only Polytypes can have foralls.
 data Type :: TypeKind -> * where
   TUnit   :: Type a                         -- ^ ()
+  TInteger :: Type a                        -- ^ Integer
   TVar    :: TVar -> Type a                 -- ^ alpha
   TExists :: TVar -> Type a                 -- ^ alpha^
   TForall :: TVar -> Type Poly -> Type Poly -- ^ forall alpha. A
@@ -79,6 +88,7 @@ type Monotype = Type Mono
 monotype :: Type a -> Maybe Monotype
 monotype typ = case typ of
   TUnit       -> Just TUnit
+  TInteger    -> Just TInteger
   TVar v      -> Just $ TVar v
   TForall _ _ -> Nothing
   TExists v   -> Just $ TExists v
@@ -88,6 +98,7 @@ monotype typ = case typ of
 polytype :: Type a -> Polytype
 polytype typ = case typ of
   TUnit       -> TUnit
+  TInteger    -> TInteger
   TVar v      -> TVar v
   TForall v t -> TForall v t
   TExists v   -> TExists v
@@ -97,6 +108,7 @@ polytype typ = case typ of
 freeTVars :: Type a -> Set TVar
 freeTVars typ = case typ of
   TUnit       -> mempty
+  TInteger    -> mempty
   TVar v      -> S.singleton v
   TForall v t -> S.delete v $ freeTVars t
   TExists v   -> S.singleton v
@@ -106,6 +118,7 @@ freeTVars typ = case typ of
 typeSubst :: Type a -> TVar -> Type a -> Type a
 typeSubst t' v typ = case typ of
   TUnit                    -> TUnit
+  TInteger                 -> TInteger
   TVar v'      | v' == v   -> t'
                | otherwise -> TVar v'
   TForall v' t | v' == v   -> TForall v' t

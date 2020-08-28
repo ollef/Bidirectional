@@ -25,6 +25,7 @@ subtype gamma typ1 typ2 =
     (TVar alpha, TVar alpha') | alpha == alpha' -> return gamma
     -- <:Unit
     (TUnit, TUnit) -> return gamma
+    (TInteger, TInteger) -> return gamma
     -- <:Exvar
     (TExists alpha, TExists alpha')
       | alpha == alpha' && alpha `elem` existentials gamma -> return gamma
@@ -179,7 +180,9 @@ typesynth gamma expr = traceNS "typesynth" (gamma, expr) $ checkwf gamma $
       return (a, delta)
     -- 1I=>
     EUnit -> return (TUnit, gamma)
-    {-
+    EBuiltin Successor -> return (TFun TInteger TInteger, gamma)
+    ELit{} -> return (TInteger, gamma)
+    -- {-
     -- ->I=> Original rule
     EAbs x e -> do
       x'    <- freshVar
@@ -194,7 +197,7 @@ typesynth gamma expr = traceNS "typesynth" (gamma, expr) $ checkwf gamma $
                   (TExists beta)
       return (TFun (TExists alpha) (TExists beta), delta)
     -- -}
-    -- {-
+    {-
     -- ->I=> Full Damas-Milner type inference
     EAbs x e -> do
       x'    <- freshVar
@@ -213,7 +216,7 @@ typesynth gamma expr = traceNS "typesynth" (gamma, expr) $ checkwf gamma $
       uvars <- replicateM (length evars) freshTVar
       return ( tforalls uvars $ typeSubsts (zip (map TVar uvars) evars) tau
              , delta)
-    -- -}
+    -}
     -- ->E
     EApp e1 e2 -> do
       (a, theta) <- typesynth gamma e1

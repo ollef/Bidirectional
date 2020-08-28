@@ -38,6 +38,7 @@ instance Pretty TVar where
 instance Pretty (Type a) where
   bpretty d typ = case typ of
     TUnit -> showString "()"
+    TInteger -> showString "Integer"
     TVar v -> bpretty d v
     TExists v -> showParen (d > exists_prec) $
       showString "∃ " . bpretty exists_prec v
@@ -57,6 +58,8 @@ instance Pretty Expr where
   bpretty d expr = case expr of
     EVar v       -> bpretty d v
     EUnit        -> showString "()"
+    EBuiltin Successor -> showString "successor"
+    ELit n       -> showString (show n)
     EAbs v e     -> showParen (d > abs_prec) $
       showString "λ" . bpretty (abs_prec + 1) v .
       showString ". " . bpretty abs_prec e
